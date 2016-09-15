@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.Extensions.FileProviders;
+using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
 {
@@ -32,6 +33,8 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
 
         public abstract RazorProjectItem GetItem(string path);
 
+        public abstract IChangeToken GetChangeToken(string pattern);
+
         public abstract IEnumerable<RazorProjectItem> EnumerateAscending(string path, string extension);
 
         private class DefaultRazorProject : RazorProject
@@ -41,6 +44,11 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
             public DefaultRazorProject(IFileProvider provider)
             {
                 _provider = provider;
+            }
+
+            public override IChangeToken GetChangeToken(string path)
+            {
+                return _provider.Watch(path);
             }
 
             public override IEnumerable<RazorProjectItem> EnumerateAscending(string path, string extension)
@@ -179,6 +187,11 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
 
         private class EmptyRazorProject : RazorProject
         {
+            public override IChangeToken GetChangeToken(string pattern)
+            {
+                return NullChangeToken.Singleton;
+            }
+
             public override IEnumerable<RazorProjectItem> EnumerateAscending(string path, string extension)
             {
                 if (path == null)

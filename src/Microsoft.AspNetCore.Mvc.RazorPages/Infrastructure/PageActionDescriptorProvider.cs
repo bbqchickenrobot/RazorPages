@@ -3,18 +3,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.IO;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ApplicationModels;
 using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution;
 using Microsoft.AspNetCore.Mvc.Routing;
-using Microsoft.AspNetCore.Razor.Parser.SyntaxTree;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
 {
-    public class PageActionDescriptorProvider : IActionDescriptorProvider
+    public class PageActionDescriptorProvider : IMutableActionDescriptorProvider
     {
         private readonly RazorProject _project;
         private readonly MvcOptions _options;
@@ -44,6 +43,11 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
                 
                 AddActionDescriptors(context.Results, item);
             }
+        }
+
+        public IChangeToken GetChangeToken()
+        {
+            return _project.GetChangeToken("/Pages/**/*.razor");
         }
 
         public void OnProvidersExecuted(ActionDescriptorProviderContext context)

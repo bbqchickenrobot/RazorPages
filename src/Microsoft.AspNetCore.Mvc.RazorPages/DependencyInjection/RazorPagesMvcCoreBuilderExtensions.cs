@@ -4,6 +4,7 @@
 using System;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.ApplicationParts;
+using Microsoft.AspNetCore.Mvc.Infrastructure;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.RazorPages.Compilation;
@@ -58,6 +59,10 @@ namespace Microsoft.Extensions.DependencyInjection
 
         private static void RegisterServices(IServiceCollection services)
         {
+            services.Replace(new ServiceDescriptor(
+                typeof(IActionDescriptorCollectionProvider),
+                typeof(PageActionDescriptorCollectionProvider),
+                ServiceLifetime.Singleton));
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IActionDescriptorProvider, PageActionDescriptorProvider>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IActionInvokerProvider, PageActionInvokerProvider>());
 
