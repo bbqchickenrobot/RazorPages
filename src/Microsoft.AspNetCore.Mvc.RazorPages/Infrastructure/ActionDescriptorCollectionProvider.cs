@@ -1,24 +1,33 @@
-﻿using System.Collections.Generic;
+﻿// Copyright (c) .NET Foundation. All rights reserved.
+// Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
+
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Mvc.Infrastructure;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
 {
-    public class PageActionDescriptorCollectionProvider : IActionDescriptorCollectionProvider
+    public class ActionDescriptorCollectionProvider : IActionDescriptorCollectionProvider
     {
         private readonly object _collectionLock = new object();
         private readonly IActionDescriptorProvider[] _providers;
+        private readonly ILogger _logger;
         private int _descriptorVersion;
         private ActionDescriptorCollection _collection;
 
-        public PageActionDescriptorCollectionProvider(
-            IEnumerable<IActionDescriptorProvider> actionDescriptors)
+        public ActionDescriptorCollectionProvider(
+            IEnumerable<IActionDescriptorProvider> actionDescriptors,
+            IEnumerable<IActionDescriptorChangeProvider> changeProviders,
+            ILoggerFactory loggerFactory)
         {
             _providers = actionDescriptors.OrderBy(p => p.Order).ToArray();
-            foreach (var provider in actionDescriptors.OfType<IMutableActionDescriptorProvider>())
+            _logger = loggerFactory.CreateLogger<ActionDescriptorCollectionProvider>();
+            foreach (var provider in changeProviders)
             {
                 ChangeToken.OnChange(provider.GetChangeToken, OnChange);
             }
@@ -28,15 +37,15 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
         {
             get
             {
-                lock (_collectionLock)
+                if (_collection == null)
                 {
-                    if (_collection == null)
-                    {
-                        _collection = GetCollection();
-                    }
-
-                    return _collection;
+                    _logger.CreateActionDescriptorCollectionStart();
+                    var startTimestamp = _logger.IsEnabled(LogLevel.Debug) ? Stopwatch.GetTimestamp() : 0;
+                    _collection = GetCollection();
+                    _logger.CreateActionDescriptorCollectionEnd(startTimestamp);
                 }
+
+                return _collection;
             }
         }
 
@@ -61,10 +70,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
 
         private void OnChange()
         {
-            lock (_collectionLock)
-            {
-                _collection = null;
-            }
+            _collection = null;
         }
     }
 }

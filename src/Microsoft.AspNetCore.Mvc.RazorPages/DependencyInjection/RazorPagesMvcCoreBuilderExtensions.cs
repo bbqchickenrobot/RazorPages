@@ -61,10 +61,12 @@ namespace Microsoft.Extensions.DependencyInjection
         {
             services.Replace(new ServiceDescriptor(
                 typeof(IActionDescriptorCollectionProvider),
-                typeof(PageActionDescriptorCollectionProvider),
+                typeof(ActionDescriptorCollectionProvider),
                 ServiceLifetime.Singleton));
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IActionDescriptorProvider, PageActionDescriptorProvider>());
             services.TryAddEnumerable(ServiceDescriptor.Singleton<IActionInvokerProvider, PageActionInvokerProvider>());
+            services.TryAddEnumerable(
+                ServiceDescriptor.Singleton<IActionDescriptorChangeProvider, PageActionDescriptorChangeProvider>());
 
             services.TryAddSingleton<IPageFactory, DefaultPageFactory>();
             services.TryAddSingleton<IPageActivator, DefaultPageActivator>();

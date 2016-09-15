@@ -9,11 +9,10 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution;
 using Microsoft.AspNetCore.Mvc.Routing;
 using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Primitives;
 
 namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
 {
-    public class PageActionDescriptorProvider : IMutableActionDescriptorProvider
+    public class PageActionDescriptorProvider : IActionDescriptorProvider
     {
         private readonly RazorProject _project;
         private readonly MvcOptions _options;
@@ -40,14 +39,9 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
                     // Pages like _PageImports should not be routable.
                     continue;
                 }
-                
+
                 AddActionDescriptors(context.Results, item);
             }
-        }
-
-        public IChangeToken GetChangeToken()
-        {
-            return _project.GetChangeToken("/Pages/**/*.razor");
         }
 
         public void OnProvidersExecuted(ActionDescriptorProviderContext context)
