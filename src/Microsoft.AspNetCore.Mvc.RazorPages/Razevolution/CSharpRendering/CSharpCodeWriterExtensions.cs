@@ -3,6 +3,7 @@
 
 using System;
 using System.Globalization;
+using Microsoft.AspNetCore.Razor;
 using Microsoft.AspNetCore.Razor.CodeGenerators;
 
 namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
@@ -28,6 +29,46 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
         public static IDisposable BuildLinePragma(this CSharpCodeWriter writer, MappingLocation documentLocation)
         {
             return new LinePragmaWriter(writer, documentLocation);
+        }
+
+        public static IDisposable NoIndent(this CSharpCodeWriter writer)
+        {
+            var currentIndent = writer.CurrentIndent;
+            writer.ResetIndent();
+            var scope = new ActionScope(() =>
+            {
+                writer.SetIndent(currentIndent);
+            });
+
+            return scope;
+        }
+
+        public static CSharpLineMappingWriter BuildCodeMapping(this CSharpCodeWriter writer, MappingLocation documentLocation)
+        {
+            // TODO: Update the primary API to accept mapping locations
+            var sourceLocation = new SourceLocation(
+                documentLocation.FilePath,
+                documentLocation.AbsoluteIndex,
+                documentLocation.LineIndex,
+                documentLocation.CharacterIndex);
+            var lineMappingWriter = new CSharpLineMappingWriter(writer, sourceLocation, documentLocation.ContentLength);
+
+            return lineMappingWriter;
+        }
+
+        private class ActionScope : IDisposable
+        {
+            private readonly Action _onDispose;
+
+            public ActionScope(Action onDispose)
+            {
+                _onDispose = onDispose;
+            }
+
+            public void Dispose()
+            {
+                _onDispose();
+            }
         }
     }
 }

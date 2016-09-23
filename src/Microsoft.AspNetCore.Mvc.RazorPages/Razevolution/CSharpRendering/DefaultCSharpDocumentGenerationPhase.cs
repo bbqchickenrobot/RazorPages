@@ -45,8 +45,6 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
 
                 document.SetGeneratedCSharpDocument(csharpDocument);
             }
-
-            // TODO: Add csharp document passes?
         }
 
         // TODO: Should this be a feature?
@@ -74,9 +72,12 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
             {
                 Render(sourceTree.Children);
 
+                var generatedCode = _generationContext.Writer.GenerateCode();
+                var lineMappings = _generationContext.Writer.LineMappingManager.Mappings;
                 var generatedCSharpDocument = new GeneratedCSharpDocument
                 {
-                    GeneratedCode = _generationContext.Writer.GenerateCode()
+                    GeneratedCode = generatedCode,
+                    LineMappings = lineMappings,
                 };
 
                 return generatedCSharpDocument;

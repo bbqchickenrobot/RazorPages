@@ -46,10 +46,11 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
                 _writer.WriteLine();
             }
 
-            _writer.ResetIndent();
-            _writer.WriteLineDefaultDirective()
-                .WriteLineHiddenDirective();
-            _writer.SetIndent(_startIndent);
+            _writer
+                .ResetIndent()
+                .WriteLineDefaultDirective()
+                .WriteLineHiddenDirective()
+                .SetIndent(_startIndent);
         }
     }
 }

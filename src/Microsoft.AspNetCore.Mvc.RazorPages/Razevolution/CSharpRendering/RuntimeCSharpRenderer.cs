@@ -12,8 +12,13 @@ using Microsoft.AspNetCore.Razor.TagHelpers;
 
 namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
 {
-    public class DefaultRuntimeCSharpRenderer : ICSharpRenderer
+    public class RuntimeCSharpRenderer : ICSharpRenderer
     {
+        private const string ExecutionContextVariableName = "__tagHelperExecutionContext";
+        private const string StringValueBufferVariableName = "__tagHelperStringValueBuffer";
+        private const string ScopeManagerVariableName = "__tagHelperScopeManager";
+        private const string RunnerVariableName = "__tagHelperRunner";
+
         public RazorEngine Engine { get; set; }
 
         public int Order { get; }
@@ -88,10 +93,6 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
             {
                 Render((ImportNamespace)source, context);
             }
-            else if (source is NamespaceDeclaration)
-            {
-                Render((NamespaceDeclaration)source, context);
-            }
             else if (source is RenderConditionalAttribute)
             {
                 Render((RenderConditionalAttribute)source, context);
@@ -112,17 +113,9 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
             {
                 Render((RenderStatement)source, context);
             }
-            else if (source is ExecuteMethodDeclaration)
-            {
-                Render((ExecuteMethodDeclaration)source, context);
-            }
             else if (source is Template)
             {
                 Render((Template)source, context);
-            }
-            else if (source is ViewClassDeclaration)
-            {
-                Render((ViewClassDeclaration)source, context);
             }
             else if (source is DeclareTagHelperFields)
             {
@@ -224,19 +217,6 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
             context.Writer.WriteUsing(source.Namespace);
         }
 
-        private static void Render(NamespaceDeclaration source, CSharpRenderingContext context)
-        {
-            context.Writer
-                .Write("namespace ")
-                .WriteLine(source.Namespace);
-
-            using (context.Writer.BuildScope())
-            {
-                context.Writer.WriteLineHiddenDirective();
-                context.Render(source.Children);
-            }
-        }
-
         private static void Render(RenderConditionalAttribute source, CSharpRenderingContext context)
         {
             var valuePieceCount = source.ValuePieces.Count(piece => piece is LiteralAttributePiece || piece is ConditionalAttributePiece);
@@ -315,7 +295,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
                 // Not an expression; need to buffer the result.
                 context.Writer.WriteStartNewObject(context.CodeLiterals.TemplateTypeName);
 
-                var redirectConventions = new RedirectWriterConventions(ValueWriterName, context);
+                var redirectConventions = new CSharpRedirectRenderingConventions(ValueWriterName, context);
                 using (context.UseRenderingConventions(redirectConventions))
                 using (context.Writer.BuildAsyncLambda(endLine: false, parameterNames: ValueWriterName))
                 {
@@ -346,7 +326,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
                 .WriteStringLiteral(source.Name)
                 .WriteParameterSeparator();
 
-            var redirectConventions = new RedirectWriterConventions(SectionWriterName, context);
+            var redirectConventions = new CSharpRedirectRenderingConventions(SectionWriterName, context);
             using (context.UseRenderingConventions(redirectConventions))
             using (context.Writer.BuildAsyncLambda(endLine: false, parameterNames: SectionWriterName))
             {
@@ -376,38 +356,6 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
             }
         }
 
-        private static void Render(ExecuteMethodDeclaration source, CSharpRenderingContext context)
-        {
-            context.Writer
-                .WriteLine("#pragma warning disable 1998")
-                .Write(source.Accessor)
-                .Write(" ");
-
-            for (var i = 0; i < source.Modifiers.Count; i++)
-            {
-                context.Writer.Write(source.Modifiers[i]);
-
-                if (i + 1 < source.Modifiers.Count)
-                {
-                    context.Writer.Write(" ");
-                }
-            }
-
-            context.Writer
-                .Write(" ")
-                .Write(source.ReturnTypeName)
-                .Write(" ")
-                .Write(source.Name)
-                .WriteLine("()");
-
-            using (context.Writer.BuildScope())
-            {
-                context.Render(source.Children);
-            }
-
-            context.Writer.WriteLine("#pragma warning restore 1998");
-        }
-
         private static void Render(Template source, CSharpRenderingContext context)
         {
             const string ItemParameterName = "item";
@@ -417,7 +365,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
                 .Write(ItemParameterName).Write(" => ")
                 .WriteStartNewObject(context.CodeLiterals.TemplateTypeName);
 
-            var redirectConventions = new RedirectWriterConventions(TemplateWriterName, context);
+            var redirectConventions = new CSharpRedirectRenderingConventions(TemplateWriterName, context);
             using (context.UseRenderingConventions(redirectConventions))
             using (context.Writer.BuildAsyncLambda(endLine: false, parameterNames: TemplateWriterName))
             {
@@ -426,55 +374,6 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
 
             context.Writer.WriteEndMethodInvocation();
         }
-
-        private static void Render(ViewClassDeclaration source, CSharpRenderingContext context)
-        {
-            context.Writer
-                .Write(source.Accessor)
-                .Write(" class ")
-                .Write(source.Name);
-
-            if (source.BaseTypeName != null || source.ImplementedInterfaceNames != null)
-            {
-                context.Writer.Write(" : ");
-            }
-
-            if (source.BaseTypeName != null)
-            {
-                context.Writer.Write(source.BaseTypeName);
-
-                if (source.ImplementedInterfaceNames != null)
-                {
-                    context.Writer.WriteParameterSeparator();
-                }
-            }
-
-            if (source.ImplementedInterfaceNames != null)
-            {
-                for (var i = 0; i < source.ImplementedInterfaceNames.Count; i++)
-                {
-                    context.Writer.Write(source.ImplementedInterfaceNames[i]);
-
-                    if (i + 1 < source.ImplementedInterfaceNames.Count)
-                    {
-                        context.Writer.WriteParameterSeparator();
-                    }
-                }
-            }
-
-            context.Writer.WriteLine();
-
-            using (context.Writer.BuildScope())
-            {
-                context.Render(source.Children);
-            }
-        }
-
-        #region TagHelper Specific Code
-        private const string ExecutionContextVariableName = "__tagHelperExecutionContext";
-        private const string StringValueBufferVariableName = "__tagHelperStringValueBuffer";
-        private const string ScopeManagerVariableName = "__tagHelperScopeManager";
-        private const string RunnerVariableName = "__tagHelperRunner";
 
         private static void Render(DeclarePreallocatedTagHelperHtmlAttribute source, CSharpRenderingContext context)
         {
@@ -648,11 +547,12 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
             var tagHelperVariableName = GetTagHelperVariableName(source.TagHelperTypeName);
 
             // Create the tag helper
-            context.Writer.WriteStartAssignment(tagHelperVariableName)
-                   .WriteStartMethodInvocation(
-                        context.CodeLiterals.GeneratedTagHelperContext.CreateTagHelperMethodName,
-                        "global::" + source.TagHelperTypeName)
-                   .WriteEndMethodInvocation();
+            context.Writer
+                .WriteStartAssignment(tagHelperVariableName)
+                .WriteStartMethodInvocation(
+                    context.CodeLiterals.GeneratedTagHelperContext.CreateTagHelperMethodName,
+                    "global::" + source.TagHelperTypeName)
+                .WriteEndMethodInvocation();
 
             context.Writer.WriteInstanceMethodInvocation(
                 ExecutionContextVariableName,
@@ -911,7 +811,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
             {
                 context.Writer.Write(((CSharpSource)attributeValue).Code);
             }
-            if (attributeValue is RenderHtml)
+            else if (attributeValue is RenderHtml)
             {
                 context.Writer.Write(((RenderHtml)attributeValue).Html);
             }
@@ -977,7 +877,6 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
             public override CSharpCodeWriter StartWriteAttributeValueMethod() =>
                 Writer.WriteStartMethodInvocation(CodeLiterals.GeneratedTagHelperContext.AddHtmlAttributeValueMethodName);
         }
-        #endregion
 
         private static void RenderExpressionInline(ICSharpSource expression, CSharpRenderingContext context)
         {
@@ -996,56 +895,6 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
                 {
                     RenderExpressionInline(expressionBlock.Children[i], context);
                 }
-            }
-        }
-
-        private class RedirectWriterConventions : CSharpRenderingConventions
-        {
-            private readonly string _redirectWriter;
-
-            public RedirectWriterConventions(string redirectWriter, CSharpRenderingContext context) : base(context)
-            {
-                _redirectWriter = redirectWriter;
-            }
-
-            public override CSharpCodeWriter StartWriteMethod()
-            {
-                return Writer
-                    .WriteStartMethodInvocation(CodeLiterals.WriteToMethodName)
-                    .Write(_redirectWriter)
-                    .WriteParameterSeparator();
-            }
-
-            public override CSharpCodeWriter StartWriteLiteralMethod()
-            {
-                return Writer
-                    .WriteStartMethodInvocation(CodeLiterals.WriteLiteralToMethodName)
-                    .Write(_redirectWriter)
-                    .WriteParameterSeparator();
-            }
-
-            public override CSharpCodeWriter StartBeginWriteAttributeMethod()
-            {
-                return Writer
-                    .WriteStartMethodInvocation(CodeLiterals.BeginWriteAttributeToMethodName)
-                    .Write(_redirectWriter)
-                    .WriteParameterSeparator();
-            }
-
-            public override CSharpCodeWriter StartWriteAttributeValueMethod()
-            {
-                return Writer
-                    .WriteStartMethodInvocation(CodeLiterals.WriteAttributeValueToMethodName)
-                    .Write(_redirectWriter)
-                    .WriteParameterSeparator();
-            }
-
-            public override CSharpCodeWriter StartEndWriteAttributeMethod()
-            {
-                return Writer
-                    .WriteStartMethodInvocation(CodeLiterals.EndWriteAttributeToMethodName)
-                    .Write(_redirectWriter)
-                    .WriteParameterSeparator();
             }
         }
     }

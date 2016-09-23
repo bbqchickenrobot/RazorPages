@@ -71,7 +71,10 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Compilation
 
                 builder.Features.Add(new DefaultChunkTreeLoweringFeature(_host));
                 builder.Features.Add(new DefaultCSharpSourceLoweringFeature(_host));
-                builder.Features.Add(new DefaultRuntimeCSharpRenderer());
+
+                // Renderers
+                builder.Features.Add(new RuntimeCSharpRenderer());
+                builder.Features.Add(new PageStructureCSharpRenderer());
 
                 builder.Features.Add(new PageDirectiveFeature()); // RazorPages-specific feature
                 builder.Features.Add(new PagesPropertyInjectionPass());

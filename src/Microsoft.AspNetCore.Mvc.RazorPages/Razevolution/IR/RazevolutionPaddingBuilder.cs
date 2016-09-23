@@ -19,6 +19,21 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR
             _host = host;
         }
 
+        public string BuildPaddingString(int padding)
+        {
+            if (_host.IsIndentingWithTabs)
+            {
+                var spaces = padding % _host.TabSize;
+                var tabs = padding / _host.TabSize;
+
+                return new string('\t', tabs) + new string(' ', spaces);
+            }
+            else
+            {
+                return new string(' ', padding);
+            }
+        }
+
         // Special case for statement padding to account for brace positioning in the editor.
         public int CalculateStatementPadding(Span target)
         {
@@ -84,21 +99,6 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR
             }
 
             return padding;
-        }
-
-        private string BuildPaddingInternal(int padding)
-        {
-            if (_host.DesignTimeMode && _host.IsIndentingWithTabs)
-            {
-                var spaces = padding % _host.TabSize;
-                var tabs = padding / _host.TabSize;
-
-                return new string('\t', tabs) + new string(' ', spaces);
-            }
-            else
-            {
-                return new string(' ', padding);
-            }
         }
 
         private static int CollectSpacesAndTabs(Span target, int tabSize)
