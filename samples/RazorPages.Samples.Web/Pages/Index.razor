@@ -1,5 +1,5 @@
 ﻿@page "{formaction?}/{id?}"
-@inherits Index
+@model Index
 
 @{
     Layout = "~/Pages/_Layout.cshtml";
@@ -13,12 +13,12 @@
             <thead>
                 <tr>
                     <th>#</th>
-                    <th>@Html.DisplayNameFor(_ => Customer.Name)</th>
+                    <th>@Html.DisplayNameFor(_ => _.Customer.Name)</th>
                     <th>&nbsp;</th>
                 </tr>
             </thead>
             <tbody>
-                @foreach (var customer in ExistingCustomers)
+                @foreach (var customer in Model.ExistingCustomers)
                 {
                 <tr>
                     <td>@Html.DisplayFor(_ => customer.Id)</td>
@@ -27,7 +27,7 @@
                     <td><button type="submit" formaction="delete/@customer.Id" class="btn btn-danger">Delete</button></td>
                 </tr>
                 }
-                @if (!ExistingCustomers.Any())
+                @if (!Model.ExistingCustomers.Any())
                 {
                     <tr>
                         <td colspan="3">[no customers found]</td>
@@ -39,8 +39,8 @@
 </div>
 
 <h2>Create Customer</h2>
-<b:alert emphasis="@ShowSuccessMessage ? Emphasis.Success : Emphasis.Danger" visible="ShowSuccessMessage || ShowErrorMessage">
-    @(ShowSuccessMessage ? SuccessMessage : ErrorMessage)
+<b:alert emphasis="@Model.ShowSuccessMessage ? Emphasis.Success : Emphasis.Danger" visible="Model.ShowSuccessMessage || Model.ShowErrorMessage">
+    @(Model.ShowSuccessMessage ? Model.SuccessMessage : Model.ErrorMessage)
 </b:alert>
 <form method="post" class="form-inline">
     <div class="form-group">

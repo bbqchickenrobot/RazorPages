@@ -5,7 +5,7 @@ using RazorPages.Samples.Web.Data;
 
 namespace RazorPages.Samples.Web.Pages
 {
-    public class EditCustomer : Page
+    public class EditCustomer : PageModel
     {
         public EditCustomer(AppDbContext db)
         {
@@ -14,34 +14,43 @@ namespace RazorPages.Samples.Web.Pages
 
         public AppDbContext Db { get; }
 
-        public Customer CurrentCustomer { get; set; }
-
-        public string SuccessMessage { get; set; }
+        public Customer Customer { get; set; }
+        
+        [TempData]
+        public string SuccessMessage
+        {
+            get { return (string)PageContext.TempData[nameof(SuccessMessage)]; }
+            set { PageContext.TempData[nameof(SuccessMessage)] = value; }
+        }
 
         public bool ShowSuccessMessage => !string.IsNullOrEmpty(SuccessMessage);
 
         [TempData]
-        public string ErrorMessage { get; set; }
+        public string ErrorMessage
+        {
+            get { return (string)PageContext.TempData[nameof(ErrorMessage)]; }
+            set { PageContext.TempData[nameof(ErrorMessage)] = value; }
+        }
 
         public bool ShowErrorMessage => !string.IsNullOrEmpty(ErrorMessage);
 
         public IActionResult OnGet(int id)
         {
-            CurrentCustomer = GetCustomer(id);
-            return View(CurrentCustomer);
+            Customer = GetCustomer(id);
+            return View();
         }
 
-        public IActionResult OnPost(Customer customer)
+        public IActionResult OnPost(int id, Customer customer)
         {
             if (ModelState.IsValid)
             {
-                UpdateCustomer(customer);
-                SuccessMessage = $"Customer {customer.Id} successfully edited!";
+                UpdateCustomer(id, customer);
+                SuccessMessage = $"Customer {id} successfully edited!";
                 return Redirect("/");
             }
 
             // Model errors, populate customer list and show errors
-            CurrentCustomer = GetCustomer(customer.Id);
+            Customer = GetCustomer(customer.Id);
             ErrorMessage = "Please correct the errors and try again";
             return View();
         }
@@ -53,9 +62,9 @@ namespace RazorPages.Samples.Web.Pages
             return customer;
         }
 
-        public void UpdateCustomer(Customer customer)
+        public void UpdateCustomer(int id, Customer customer)
         {
-            var currentCustomer = Db.Customers.Single(c => c.Id == customer.Id);
+            var currentCustomer = Db.Customers.Single(c => c.Id == id);
             
             currentCustomer.Name = customer.Name;
             Db.SaveChanges();

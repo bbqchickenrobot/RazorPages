@@ -107,11 +107,6 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages
             return new PageViewResult(this);
         }
 
-        protected IActionResult View(object model)
-        {
-            return new PageViewResult(this, model);
-        }
-
         Task IRazorPage.ExecuteAsync()
         {
             return RenderAsync();

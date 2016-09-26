@@ -10,7 +10,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
 {
     public static class ExecutorFactory
     {
-        public static Func<Page, Task<IActionResult>> Create(MethodInfo method)
+        public static Func<Page, object, Task<IActionResult>> Create(MethodInfo method)
         {
             return new Executor()
             {
@@ -20,13 +20,13 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
 
         private class Executor
         {
-            public Type Type { get; set; }
-
             public MethodInfo Method { get; set; }
 
-            public async Task<IActionResult> Execute(Page page)
+            public async Task<IActionResult> Execute(Page page, object model)
             {
                 var handler = HandlerMethod.Create(Method);
+
+                var receiver = Method.DeclaringType.IsAssignableFrom(page.GetType()) ? page : model; 
 
                 var arguments = new object[handler.Parameters.Length];
                 for (var i = 0; i < handler.Parameters.Length; i++)
@@ -35,7 +35,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
                     arguments[i] = await page.Binder.BindModelAsync(page.PageContext, parameter.Type, parameter.DefaultValue, parameter.Name);
                 }
 
-                var result = await handler.Execute(page, arguments);
+                var result = await handler.Execute(receiver, arguments);
                 return result;
             }
         }
@@ -109,31 +109,31 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
 
             public HandlerParameter[] Parameters { get; }
 
-            public abstract Task<IActionResult> Execute(Page page, object[] arguments);
+            public abstract Task<IActionResult> Execute(object receiver, object[] arguments);
         }
 
         private class NonGenericTaskHandlerMethod : HandlerMethod
         {
-            private readonly Func<Page, object[], Task> _thunk;
+            private readonly Func<object, object[], Task> _thunk;
 
             public NonGenericTaskHandlerMethod(HandlerParameter[] parameters, MethodInfo method)
                 : base(parameters)
             {
-                var page = Expression.Parameter(typeof(Page), "page");
+                var receiver = Expression.Parameter(typeof(object), "receiver");
                 var arguments = Expression.Parameter(typeof(object[]), "arguments");
 
-                _thunk = Expression.Lambda<Func<Page, object[], Task>>(
+                _thunk = Expression.Lambda<Func<object, object[], Task>>(
                     Expression.Call(
-                        Expression.Convert(page, method.DeclaringType),
+                        Expression.Convert(receiver, method.DeclaringType),
                         method,
                         Unpack(arguments, parameters)),
-                    page,
+                    receiver,
                     arguments).Compile();
             }
 
-            public override async Task<IActionResult> Execute(Page page, object[] arguments)
+            public override async Task<IActionResult> Execute(object receiver, object[] arguments)
             {
-                await _thunk(page, arguments);
+                await _thunk(receiver, arguments);
                 return null;
             }
         }
@@ -144,30 +144,30 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
                 nameof(Convert), 
                 BindingFlags.NonPublic | BindingFlags.Static);
 
-            private readonly Func<Page, object[], Task<object>> _thunk;
+            private readonly Func<object, object[], Task<object>> _thunk;
 
             public GenericTaskHandlerMethod(HandlerParameter[] parameters, MethodInfo method)
                 : base(parameters)
             {
-                var page = Expression.Parameter(typeof(Page), "page");
+                var receiver = Expression.Parameter(typeof(object), "receiver");
                 var arguments = Expression.Parameter(typeof(object[]), "arguments");
 
-                _thunk = Expression.Lambda<Func<Page, object[], Task<object>>>(
+                _thunk = Expression.Lambda<Func<object, object[], Task<object>>>(
                     Expression.Call(
                         ConvertMethod.MakeGenericMethod(method.ReturnType.GenericTypeArguments),
                         Expression.Convert(
                             Expression.Call(
-                                Expression.Convert(page, method.DeclaringType), 
+                                Expression.Convert(receiver, method.DeclaringType), 
                                 method, 
                                 Unpack(arguments, parameters)),
                             typeof(object))),
-                    page,
+                    receiver,
                     arguments).Compile();
             }
 
-            public override async Task<IActionResult> Execute(Page page, object[] arguments)
+            public override async Task<IActionResult> Execute(object receiver, object[] arguments)
             {
-                var result = await _thunk(page, arguments);
+                var result = await _thunk(receiver, arguments);
                 return (IActionResult)result;
             }
 
@@ -180,54 +180,54 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Internal
 
         private class VoidHandlerMethod : HandlerMethod
         {
-            private readonly Action<Page, object[]> _thunk;
+            private readonly Action<object, object[]> _thunk;
 
             public VoidHandlerMethod(HandlerParameter[] parameters, MethodInfo method)
                 : base(parameters)
             {
-                var page = Expression.Parameter(typeof(Page), "page");
+                var receiver = Expression.Parameter(typeof(object), "receiver");
                 var arguments = Expression.Parameter(typeof(object[]), "arguments");
 
-                _thunk = Expression.Lambda<Action<Page, object[]>>(
+                _thunk = Expression.Lambda<Action<object, object[]>>(
                     Expression.Call(
-                        Expression.Convert(page, method.DeclaringType),
+                        Expression.Convert(receiver, method.DeclaringType),
                         method,
                         Unpack(arguments, parameters)),
-                    page,
+                    receiver,
                     arguments).Compile();
             }
 
-            public override Task<IActionResult> Execute(Page page, object[] arguments)
+            public override Task<IActionResult> Execute(object receiver, object[] arguments)
             {
-                _thunk(page, arguments);
+                _thunk(receiver, arguments);
                 return Task.FromResult<IActionResult>(null);
             }
         }
 
         private class ActionResultHandlerMethod : HandlerMethod
         {
-            private readonly Func<Page, object[], IActionResult> _thunk;
+            private readonly Func<object, object[], IActionResult> _thunk;
 
             public ActionResultHandlerMethod(HandlerParameter[] parameters, MethodInfo method)
                 : base(parameters)
             {
-                var page = Expression.Parameter(typeof(Page), "page");
+                var receiver = Expression.Parameter(typeof(object), "receiver");
                 var arguments = Expression.Parameter(typeof(object[]), "arguments");
 
-                _thunk = Expression.Lambda<Func<Page, object[], IActionResult>>(
+                _thunk = Expression.Lambda<Func<object, object[], IActionResult>>(
                     Expression.Convert(
                         Expression.Call(
-                            Expression.Convert(page, method.DeclaringType),
+                            Expression.Convert(receiver, method.DeclaringType),
                             method,
                             Unpack(arguments, parameters)),
                         typeof(IActionResult)),
-                    page,
+                    receiver,
                     arguments).Compile();
             }
 
-            public override Task<IActionResult> Execute(Page page, object[] arguments)
+            public override Task<IActionResult> Execute(object receiver, object[] arguments)
             {
-                return Task.FromResult(_thunk(page, arguments));
+                return Task.FromResult(_thunk(receiver, arguments));
             }
         }
     }

@@ -2,8 +2,7 @@
 
 @using RazorPages.Samples.Web
 @using RazorPages.Samples.Web.Data
-@model Customer
-@inherits EditCustomer
+@model EditCustomer
 
 @{
     Layout = "~/Pages/_Layout.cshtml";
@@ -11,16 +10,16 @@
 }
 
 <h2>Edit Customer</h2>
-@if (ShowSuccessMessage || ShowErrorMessage) {
-    <div class="alert alert-@(ShowSuccessMessage ? "success" : "danger") alert-dismissable" role="alert">
+@if (Model.ShowSuccessMessage || Model.ShowErrorMessage) {
+    <div class="alert alert-@(Model.ShowSuccessMessage ? "success" : "danger") alert-dismissable" role="alert">
         <button type="button" class="close" data-dismiss="alert" aria-label="close"><span aria-hidden="true">&times;</span></button>
-        @(ShowSuccessMessage ? SuccessMessage : ErrorMessage)
+        @(Model.ShowSuccessMessage ? Model.SuccessMessage : Model.ErrorMessage)
     </div>    
 }
-<form method="post" class="form-inline">
+<form method="post" class="form-inline" href="/Customer/Edit/@Model.Customer.Id">
     <div class="form-group">
-        <label asp-for="Name"></label>
-        <input asp-for="Name" class="form-control" />
+        <label asp-for="Customer.Name"></label>
+        <input asp-for="Customer.Name" class="form-control" />
     </div>
     <input type="submit" value="Save" class="btn btn-primary" />
     <a class="btn btn-default" href="/">Cancel</a>

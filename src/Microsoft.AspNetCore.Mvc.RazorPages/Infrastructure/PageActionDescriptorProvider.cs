@@ -52,7 +52,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
 
         private void AddActionDescriptors(IList<ActionDescriptor> actions, RazorProjectItem item)
         {
-            var model = new PageModel(item.CominedPath, item.PathWithoutExtension);
+            var model = new ApplicationModels.PageModel(item.CominedPath, item.PathWithoutExtension);
 
             model.Selectors.Add(new SelectorModel()
             {

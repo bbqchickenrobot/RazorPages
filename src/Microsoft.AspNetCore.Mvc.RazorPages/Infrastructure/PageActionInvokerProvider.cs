@@ -20,6 +20,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
         private readonly ILogger _logger;
         private readonly IFilterProvider[] _filterProviders;
         private readonly IPageFactory _factory;
+        private readonly IPageModelFactory _modelFactory;
         private readonly IPageLoader _loader;
         private readonly IPageHandlerMethodSelector _selector;
         private readonly IValueProviderFactory[] _valueProviderFactories;
@@ -30,8 +31,9 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
 
         public PageActionInvokerProvider(
             IPageFactory factory,
+            IPageModelFactory modelFactory,
             IPageHandlerMethodSelector selector,
-            IPageLoader loader, 
+            IPageLoader loader,
             DiagnosticListener diagnosticSource,
             ILoggerFactory loggerFactory,
             IEnumerable<IFilterProvider> filterProviders,
@@ -42,6 +44,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
             TempDataPropertyProvider pagePersistedPropertyProvider)
         {
             _factory = factory;
+            _modelFactory = modelFactory;
             _selector = selector;
             _diagnosticSource = diagnosticSource;
             _loader = loader;
@@ -88,15 +91,32 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
                     filters[i] = filterProviderContext.Results[i].Filter;
                 }
 
-                var compiledType = _loader.Load(actionDescriptor);
+                var compiledType = _loader.Load(actionDescriptor).GetTypeInfo();
+                var modelType = compiledType.GetProperty("Model")?.PropertyType.GetTypeInfo();
 
                 var compiledActionDescriptor = new CompiledPageActionDescriptor(actionDescriptor)
                 {
-                    PageType = compiledType.GetTypeInfo(),
+                    ModelType = modelType,
+                    PageType = compiledType,
                     HandlerMethods = new List<HandlerMethodDescriptor>(),
                 };
 
-                foreach (var method in compiledType.GetTypeInfo().GetMethods())
+                if (modelType != null)
+                {
+                    foreach (var method in modelType.GetMethods())
+                    {
+                        if (method.Name.StartsWith("OnGet") ||
+                            method.Name.StartsWith("OnPost"))
+                        {
+                            compiledActionDescriptor.HandlerMethods.Add(new HandlerMethodDescriptor()
+                            {
+                                Method = method,
+                            });
+                        }
+                    }
+                }
+
+                foreach (var method in compiledType.GetMethods())
                 {
                     if (method.Name.StartsWith("OnGet") ||
                         method.Name.StartsWith("OnPost"))
@@ -112,8 +132,9 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
                     _diagnosticSource,
                     _logger,
                     _factory,
+                    _modelFactory,
                     _selector,
-                    _metadataProvider, 
+                    _metadataProvider,
                     _tempDataFactory,
                     _viewOptions,
                     filters,

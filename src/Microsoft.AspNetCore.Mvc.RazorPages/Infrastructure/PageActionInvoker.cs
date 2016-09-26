@@ -13,6 +13,7 @@ using Microsoft.AspNetCore.Mvc.Internal;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Mvc.RazorPages.Internal;
 using Microsoft.AspNetCore.Mvc.ViewFeatures;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 
@@ -21,6 +22,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
     public class PageActionInvoker : IActionInvoker
     {
         private readonly IPageFactory _factory;
+        private readonly IPageModelFactory _modelFactory;
         private readonly IPageHandlerMethodSelector _selector;
         private readonly IModelMetadataProvider _metadataProvider;
         private readonly ITempDataDictionaryFactory _tempDataFactory;
@@ -44,6 +46,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
             DiagnosticListener diagnosticSource,
             ILogger logger,
             IPageFactory factory,
+            IPageModelFactory modelFactory,
             IPageHandlerMethodSelector selector,
             IModelMetadataProvider metadataProvider,
             ITempDataDictionaryFactory tempDataFactory,
@@ -57,6 +60,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
             _diagnosticSource = diagnosticSource;
             _logger = logger;
             _factory = factory;
+            _modelFactory = modelFactory;
             _selector = selector;
             _metadataProvider = metadataProvider;
             _tempDataFactory = tempDataFactory;
@@ -443,27 +447,11 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
 
         private async Task ExecutePageAsync()
         {
-            Type viewDataType = null;
-            var viewDataProperty = _actionDescriptor.PageType.GetDeclaredProperty("ViewData");
-            if (viewDataProperty != null)
-            {
-                var viewDataPropertyType = viewDataProperty.PropertyType.GetTypeInfo();
-                if (viewDataPropertyType.IsGenericType && viewDataPropertyType.GetGenericTypeDefinition() == typeof(ViewDataDictionary<>))
-                {
-                    viewDataType = viewDataPropertyType.GetGenericArguments()[0];
-                }
-            }
+            var modelType = _actionDescriptor.ModelType?.AsType();
+            var viewDataType = typeof(ViewDataDictionary<>).MakeGenericType(modelType ?? _actionDescriptor.PageType.AsType());
 
-            ViewDataDictionary viewData;
-            if (viewDataType == null)
-            {
-                viewData = new ViewDataDictionary<object>(_metadataProvider, _actionContext.ModelState);
-            }
-            else
-            {
-                viewData = (ViewDataDictionary)Activator.CreateInstance(typeof(ViewDataDictionary<>).MakeGenericType(viewDataType), _metadataProvider, _actionContext.ModelState);
-            }
-            
+            var viewData = (ViewDataDictionary)Activator.CreateInstance(viewDataType, _metadataProvider, _actionContext.ModelState);
+
             var tempData = _tempDataFactory.GetTempData(_actionContext.HttpContext);
 
             var pageContext = new PageContext(_actionContext, viewData, tempData, _viewOptions.HtmlHelperOptions)
@@ -473,6 +461,22 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
             };
 
             var page = (Page)_factory.CreatePage(pageContext);
+            pageContext.Page = page;
+
+            object model = null;
+            if (modelType == null)
+            {
+                model = page;
+            }
+            else
+            {
+                model = _modelFactory.CreateModel(pageContext);
+            }
+
+            if (model != null)
+            {
+                viewData.Model = model;
+            }
 
             var tempDataPropertyTracker = _tempDataPropertyProvider.LoadAndTrackChanges(page, page.TempData);
             IActionResult result = null;
@@ -481,7 +485,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
             if (handler != null)
             {
                 var executor = ExecutorFactory.Create(handler.Method);
-                result = await executor(page);
+                result = await executor(page, model);
             }
 
             if (result == null)

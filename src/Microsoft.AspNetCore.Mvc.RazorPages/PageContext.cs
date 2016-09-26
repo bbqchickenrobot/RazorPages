@@ -14,6 +14,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages
 {
     public class PageContext : ViewContext
     {
+        private Page _page;
         private IList<IValueProviderFactory> _valueProviderFactories;
 
         public PageContext()
@@ -33,6 +34,20 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages
         {
             get { return (CompiledPageActionDescriptor)base.ActionDescriptor; }
             set { base.ActionDescriptor = value; }
+        }
+
+        public Page Page
+        {
+            get { return _page; }
+            set
+            {
+                if (value == null)
+                {
+                    throw new ArgumentNullException(nameof(value));
+                }
+
+                _page = value;
+            }
         }
 
         public IList<IValueProviderFactory> ValueProviderFactories

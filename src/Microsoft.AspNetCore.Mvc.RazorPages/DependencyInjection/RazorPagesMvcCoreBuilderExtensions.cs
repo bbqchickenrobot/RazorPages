@@ -63,6 +63,8 @@ namespace Microsoft.Extensions.DependencyInjection
 
             services.TryAddSingleton<IPageFactory, DefaultPageFactory>();
             services.TryAddSingleton<IPageActivator, DefaultPageActivator>();
+            services.TryAddSingleton<IPageModelFactory, DefaultPageModelFactory>();
+            services.TryAddSingleton<IPageModelActivator, DefaultPageModelActivator>();
             services.TryAddSingleton<IPageHandlerMethodSelector, DefaultPageHandlerMethodSelector>();
 
             services.TryAddSingleton<RazorProject>((s) =>

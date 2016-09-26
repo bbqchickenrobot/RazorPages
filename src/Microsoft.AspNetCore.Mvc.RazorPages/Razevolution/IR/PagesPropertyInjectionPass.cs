@@ -46,7 +46,13 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR
 
             // Inject properties needed to execute Razor pages.
             var classDeclaration = FindClassDeclaration(sourceTree);
+
             var viewDataType = $"global::Microsoft.AspNetCore.Mvc.ViewFeatures.ViewDataDictionary<{modelType}>";
+            classDeclaration.Children.Insert(0, new RenderStatement()
+            {
+                Code = $"public {modelType} Model => ViewData.Model;",
+            });
+
             var viewDataProperty = new RenderStatement
             {
                 Code = $"public new {viewDataType} ViewData => ({viewDataType})base.ViewData;"

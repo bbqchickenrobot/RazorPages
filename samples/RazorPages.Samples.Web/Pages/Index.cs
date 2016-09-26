@@ -9,7 +9,7 @@ using RazorPages.Samples.Web.Data;
 
 namespace RazorPages.Samples.Web.Pages
 {
-    public class Index : Page
+    public class Index : PageModel
     {
         private readonly ILogger<Index> _logger;
 
@@ -26,12 +26,20 @@ namespace RazorPages.Samples.Web.Pages
         public Customer Customer { get; set; } = new Customer();
 
         [TempData]
-        public string SuccessMessage { get; set; }
+        public string SuccessMessage
+        {
+            get { return (string)PageContext.TempData[nameof(SuccessMessage)]; }
+            set { PageContext.TempData[nameof(SuccessMessage)] = value; }
+        }
 
         public bool ShowSuccessMessage => !string.IsNullOrEmpty(SuccessMessage);
 
         [TempData]
-        public string ErrorMessage { get; set; }
+        public string ErrorMessage
+        {
+            get { return (string)PageContext.TempData[nameof(ErrorMessage)]; }
+            set { PageContext.TempData[nameof(ErrorMessage)] = value; }
+        }
 
         public bool ShowErrorMessage => !string.IsNullOrEmpty(ErrorMessage);
 

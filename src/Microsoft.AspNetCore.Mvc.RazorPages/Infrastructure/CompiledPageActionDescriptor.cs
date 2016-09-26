@@ -24,6 +24,8 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
 
         public IList<HandlerMethodDescriptor> HandlerMethods { get; set; }
 
+        public TypeInfo ModelType { get; set; }
+
         public TypeInfo PageType { get; set; }
     }
 }
