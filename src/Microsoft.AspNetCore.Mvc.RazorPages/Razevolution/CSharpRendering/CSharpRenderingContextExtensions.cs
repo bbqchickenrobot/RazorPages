@@ -2,11 +2,25 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections.Generic;
+using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR;
 
 namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
 {
     public static class CSharpRenderingContextExtensions
     {
+        public static IEnumerable<IRazorDirective> GetDirectives(this CSharpRenderingContext context)
+        {
+            var directives = context.Items[typeof(IEnumerable<IRazorDirective>)] as IEnumerable<IRazorDirective>;
+
+            return directives;
+        }
+
+        public static void SetDirectives(this CSharpRenderingContext context, IEnumerable<IRazorDirective> directives)
+        {
+            context.Items[typeof(IEnumerable<IRazorDirective>)] = directives;
+        }
+
         public static IDisposable UseRenderingConventions(
             this CSharpRenderingContext context,
             CSharpRenderingConventions conventions)

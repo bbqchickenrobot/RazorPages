@@ -4,6 +4,7 @@
 using System;
 using System.Diagnostics;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.Directives;
 using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR;
 using Microsoft.AspNetCore.Razor;
 using Microsoft.AspNetCore.Razor.CodeGenerators;
@@ -14,6 +15,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
     public class DesignTimeCSharpRenderer : ICSharpRenderer
     {
         private const string DesignTimeVariable = "__o";
+        private const string ActionHelper = "__actionHelper";
 
         private readonly RazevolutionPaddingBuilder _paddingBuilder;
 
@@ -95,6 +97,81 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
             }
 
             return true;
+        }
+
+        private void Render(IRazorDirective source, CSharpRenderingContext context)
+        {
+            const string TypeHelper = "__typeHelper";
+
+            for (var i = 0; i < source.Tokens.Count; i++)
+            {
+                var token = source.Tokens[i];
+                var tokenType = token.Descriptor.Type;
+
+                if (token.DocumentLocation == null ||
+                    (tokenType != RazorDirectiveTokenType.Type &&
+                    tokenType != RazorDirectiveTokenType.Member &&
+                    tokenType != RazorDirectiveTokenType.String))
+                {
+                    continue;
+                }
+
+                // Wrap the directive token in a lambda to isolate variable names.
+                context.Writer.WriteStartAssignment(ActionHelper);
+                using (context.Writer.BuildLambda(endLine: true))
+                {
+                    switch (tokenType)
+                    {
+                        case RazorDirectiveTokenType.Type:
+                            using (context.Writer.BuildCodeMapping(token.DocumentLocation))
+                            {
+                                context.Writer.Write(token.Value);
+                            }
+
+                            context.Writer
+                                .Write(" ")
+                                .WriteStartAssignment(TypeHelper)
+                                .WriteLine("null;");
+                            break;
+                        case RazorDirectiveTokenType.Member:
+                            context.Writer
+                                .Write(typeof(object).FullName)
+                                .Write(" ");
+
+                            using (context.Writer.BuildCodeMapping(token.DocumentLocation))
+                            {
+                                context.Writer.Write(token.Value);
+                            }
+                            context.Writer.WriteLine(" = null;");
+                            break;
+                        case RazorDirectiveTokenType.String:
+                            context.Writer
+                                .Write(typeof(object).FullName)
+                                .Write(" ")
+                                .WriteStartAssignment(TypeHelper);
+
+                            if (token.Value.StartsWith("\"", StringComparison.Ordinal))
+                            {
+                                using (context.Writer.BuildCodeMapping(token.DocumentLocation))
+                                {
+                                    context.Writer.Write(token.Value);
+                                }
+                            }
+                            else
+                            {
+                                context.Writer.Write("\"");
+                                using (context.Writer.BuildCodeMapping(token.DocumentLocation))
+                                {
+                                    context.Writer.Write(token.Value);
+                                }
+                                context.Writer.Write("\"");
+                            }
+
+                            context.Writer.WriteLine(";");
+                            break;
+                    }
+                }
+            }
         }
 
         private void Render(CSharpSource source, CSharpRenderingContext context)
@@ -197,10 +274,27 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
 
         private void Render(ExecuteMethodDeclaration source, CSharpRenderingContext context)
         {
+            const string DesignTimeHelperMethodName = "__RazorDesignTimeHelpers__";
+            const int DisableVariableNamingWarnings = 219;
+
             context.Writer
                 .Write("private static object @")
                 .Write(DesignTimeVariable)
                 .WriteLine(";");
+
+            using (context.Writer.BuildMethodDeclaration("private", "void", "@" + DesignTimeHelperMethodName))
+            {
+                using (context.Writer.BuildDisableWarningScope(DisableVariableNamingWarnings))
+                {
+                    context.Writer.WriteVariableDeclaration(typeof(Action).FullName, ActionHelper, value: null);
+
+                    var directives = context.GetDirectives();
+                    foreach (var directive in directives)
+                    {
+                        Render(directive, context);
+                    }
+                }
+            }
         }
 
         private void Render(Template source, CSharpRenderingContext context)

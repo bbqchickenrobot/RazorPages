@@ -40,7 +40,8 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
                     throw new InvalidOperationException("Need to create the csharp document");
                 }
 
-                var rendererOrchestrator = new CSharpRendererOrchestrator(csharpRenderers, _host, document.ErrorSink);
+                var directives = document.GetCSharpRenderingDirectives() ?? Enumerable.Empty<IRazorDirective>();
+                var rendererOrchestrator = new CSharpRendererOrchestrator(csharpRenderers, directives, _host, document.ErrorSink);
                 csharpDocument = rendererOrchestrator.Render(sourceTree);
 
                 document.SetGeneratedCSharpDocument(csharpDocument);
@@ -55,6 +56,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
 
             public CSharpRendererOrchestrator(
                 IEnumerable<ICSharpRenderer> renderers,
+                IEnumerable<IRazorDirective> directives,
                 RazorEngineHost _host,
                 ErrorSink errorSink)
             {
@@ -66,6 +68,8 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
                     ErrorSink = errorSink,
                     Render = Render,
                 };
+
+                _generationContext.SetDirectives(directives);
             }
 
             public GeneratedCSharpDocument Render(CSharpSourceTree sourceTree)

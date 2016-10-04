@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Microsoft.AspNetCore.Mvc.RazorPages.Compilation;
+using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.Directives;
 using Microsoft.AspNetCore.Razor;
 using Microsoft.AspNetCore.Razor.Compilation.TagHelpers;
 using Microsoft.AspNetCore.Razor.Parser.Internal;
@@ -14,14 +15,17 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
 {
     public abstract class RazorParser
     {
-        public static RazorSyntaxTree Parse(RazorSourceDocument document)
+        public static RazorSyntaxTree Parse(RazorSourceDocument document) =>
+            Parse(document, additionalDirectives: Enumerable.Empty<RazorDirectiveDescriptor>());
+
+        public static RazorSyntaxTree Parse(RazorSourceDocument document, IEnumerable<RazorDirectiveDescriptor> additionalDirectives)
         {
             if (document == null)
             {
                 throw new ArgumentException(nameof(document));
             }
 
-            var codeParser = new PageCodeParser();
+            var codeParser = new PageCodeParser(additionalDirectives);
             var markupParser = new HtmlMarkupParser();
 
             var parser = new OldParser.RazorParser(codeParser, markupParser, new NullTagHelperDescriptorResolver());

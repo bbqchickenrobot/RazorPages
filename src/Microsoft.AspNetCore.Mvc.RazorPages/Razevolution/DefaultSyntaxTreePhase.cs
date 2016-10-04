@@ -3,6 +3,7 @@
 
 using System;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.Directives;
 
 namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
 {
@@ -15,7 +16,8 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
             var syntaxTree = document.GetSyntaxTree();
             if (syntaxTree == null)
             {
-                syntaxTree = RazorParser.Parse(document.Source);
+                var directiveDescriptors = document.GetDirectiveDescriptors() ?? Enumerable.Empty<RazorDirectiveDescriptor>();
+                syntaxTree = RazorParser.Parse(document.Source, directiveDescriptors);
             }
 
             var passes = Engine.Features.OfType<ISyntaxTreePass>().OrderBy(p => p.Order).ToArray();

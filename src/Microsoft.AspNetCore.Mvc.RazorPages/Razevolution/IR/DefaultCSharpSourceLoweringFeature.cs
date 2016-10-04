@@ -30,7 +30,6 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR
                 SourceFileName = document.Source.Filename
             };
 
-            new RazorDirectiveVisitor(context).Accept(chunkTree.Root);
             var checksum = new Checksum
             {
                 FileName = document.Source.Filename,

@@ -7,6 +7,6 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR
 {
     public class CSharpBlock : ICSharpSource
     {
-        public IList<ICSharpSource> Children { get; set; } = new List<ICSharpSource>();
+        public List<ICSharpSource> Children { get; set; } = new List<ICSharpSource>();
     }
 }

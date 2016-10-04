@@ -2,6 +2,8 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Linq;
+using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.Directives;
 using Microsoft.AspNetCore.Razor;
 using Microsoft.AspNetCore.Razor.CodeGenerators;
 using Microsoft.AspNetCore.Razor.Compilation.TagHelpers;
@@ -98,7 +100,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Compilation
 
         public override ParserBase DecorateCodeParser(ParserBase incomingCodeParser)
         {
-            return new PageCodeParser();
+            return new PageCodeParser(additionalDirectives: Enumerable.Empty<RazorDirectiveDescriptor>());
         }
 
         public override CodeGenerator DecorateCodeGenerator(CodeGenerator incomingBuilder, CodeGeneratorContext context)

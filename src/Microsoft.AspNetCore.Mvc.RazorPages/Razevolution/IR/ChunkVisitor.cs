@@ -4,6 +4,7 @@
 using System;
 using System.Collections.Generic;
 using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.Directives;
 using Microsoft.AspNetCore.Razor.Chunks;
 using Microsoft.AspNetCore.Razor.CodeGenerators.Visitors;
 
@@ -40,7 +41,6 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR
             {
                 Visit((ModelChunk)chunk);
             }
-
             else if (chunk is LiteralChunk)
             {
                 Visit((LiteralChunk)chunk);
@@ -109,10 +109,26 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR
             {
                 Visit((TemplateChunk)chunk);
             }
+            else if (chunk is RazorDirectiveChunk)
+            {
+                Visit((RazorDirectiveChunk)chunk);
+            }
+            else if (chunk is RazorDirectiveTokenChunk)
+            {
+                Visit((RazorDirectiveTokenChunk)chunk);
+            }
             else if (chunk is ParentChunk)
             {
                 Visit((ParentChunk)chunk);
             }
+        }
+
+        protected virtual void Visit(RazorDirectiveChunk chunk)
+        {
+        }
+
+        protected virtual void Visit(RazorDirectiveTokenChunk chunk)
+        {
         }
 
         protected virtual void Visit(ModelChunk chunk)

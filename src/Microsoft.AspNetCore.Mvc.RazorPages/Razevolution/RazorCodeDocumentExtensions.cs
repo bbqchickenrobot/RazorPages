@@ -3,11 +3,40 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.Directives;
+using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR;
 
 namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
 {
     public static class RazorCodeDocumentExtensions
     {
+        public static IEnumerable<RazorDirectiveDescriptor> GetDirectiveDescriptors(this RazorCodeDocument document)
+        {
+            if (document == null)
+            {
+                throw new ArgumentNullException(nameof(document));
+            }
+
+            return (IEnumerable<RazorDirectiveDescriptor>)document.Items[typeof(IEnumerable<RazorDirectiveDescriptor>)];
+        }
+
+        public static void SetDirectiveDescriptors(
+            this RazorCodeDocument document,
+            IEnumerable<RazorDirectiveDescriptor> directiveDescriptors)
+        {
+            if (document == null)
+            {
+                throw new ArgumentNullException(nameof(document));
+            }
+
+            if (directiveDescriptors == null)
+            {
+                throw new ArgumentNullException(nameof(directiveDescriptors));
+            }
+
+            document.Items[typeof(IEnumerable<RazorDirectiveDescriptor>)] = directiveDescriptors;
+        }
+
         public static RazorSyntaxTree GetSyntaxTree(this RazorCodeDocument document)
         {
             if (document == null)
@@ -113,6 +142,31 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
             }
 
             document.Items[typeof(GeneratedCSharpDocument)] = code;
+        }
+
+        public static IEnumerable<IRazorDirective> GetCSharpRenderingDirectives(this RazorCodeDocument document)
+        {
+            if (document == null)
+            {
+                throw new ArgumentNullException(nameof(document));
+            }
+
+            return (IEnumerable<IRazorDirective>)document.Items[typeof(IEnumerable<IRazorDirective>)];
+        }
+
+        public static void SetCSharpRenderingDirectives(this RazorCodeDocument document, IEnumerable<IRazorDirective> directives)
+        {
+            if (document == null)
+            {
+                throw new ArgumentNullException(nameof(document));
+            }
+
+            if (directives == null)
+            {
+                throw new ArgumentNullException(nameof(directives));
+            }
+
+            document.Items[typeof(IEnumerable<IRazorDirective>)] = directives;
         }
 
         public static GeneratedClassInfo GetClassName(this RazorCodeDocument document)

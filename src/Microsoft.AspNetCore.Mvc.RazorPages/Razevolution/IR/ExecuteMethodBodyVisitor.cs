@@ -4,6 +4,8 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc.Razor;
+using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.Directives;
 using Microsoft.AspNetCore.Razor;
 using Microsoft.AspNetCore.Razor.Chunks;
 using Microsoft.AspNetCore.Razor.CodeGenerators;
@@ -27,6 +29,100 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR
 
             _context = context;
             _paddingBuilder = new RazevolutionPaddingBuilder(context.Host);
+        }
+
+        protected override void Visit(RazorDirectiveTokenChunk chunk)
+        {
+            var filePath = chunk.Start.FilePath ?? _context.SourceFileName;
+            var fileMappedLocation = new SourceLocation(filePath, chunk.Start.AbsoluteIndex, chunk.Start.LineIndex, chunk.Start.CharacterIndex);
+            var documentLocation = new MappingLocation(fileMappedLocation, chunk.Value.Length);
+            var token = new RazorDirectiveToken()
+            {
+                Descriptor = chunk.Descriptor,
+                Value = chunk.Value,
+                DocumentLocation = documentLocation
+            };
+
+            _context.Builder.Add(token);
+        }
+
+        protected override void Visit(RazorDirectiveChunk chunk)
+        {
+            var tokensBlock = new CSharpBlock();
+            using (_context.Builder.UseBlock(tokensBlock))
+            {
+                Accept(chunk.Children);
+            }
+
+            IRazorDirective directive;
+            var tokens = tokensBlock.Children.OfType<RazorDirectiveToken>().ToList();
+            if (chunk.Descriptor.Type == RazorDirectiveDescriptorType.SingleLine)
+            {
+                directive = new RazorSingleLineDirective()
+                {
+                    Name = chunk.Name,
+                    Tokens = tokens,
+                };
+            }
+            else
+            {
+                var directiveChildren = tokensBlock.Children.Except(tokens);
+                var directiveBlock = new RazorBlockDirective()
+                {
+                    Name = chunk.Name,
+                    Tokens = tokens,
+                };
+
+                directiveBlock.Children.AddRange(directiveChildren);
+                directive = directiveBlock;
+            }
+
+            _context.Builder.Add(directive);
+        }
+
+        protected override void Visit(ModelChunk chunk)
+        {
+            // TODO: Remove this ModelChunk handling point, make the model directive more generic.
+
+            var modelTokens = new List<RazorDirectiveToken>()
+            {
+                new RazorDirectiveToken
+                {
+                    Descriptor = new RazorDirectiveTokenDescriptor { Type = RazorDirectiveTokenType.Type },
+                    Value = chunk.ModelType,
+                }
+            };
+            var modelDirective = new RazorSingleLineDirective()
+            {
+                Name = "model",
+                Tokens = modelTokens,
+            };
+            _context.Builder.Add(modelDirective);
+        }
+
+        protected override void Visit(InjectChunk chunk)
+        {
+            // TODO: Remove this InjectChunk handling point, make the inject directive more generic.
+            var injectTokens = new List<RazorDirectiveToken>
+            {
+                new RazorDirectiveToken
+                {
+                    Descriptor = new RazorDirectiveTokenDescriptor { Type = RazorDirectiveTokenType.Type },
+                    Value = chunk.TypeName,
+                },
+                new RazorDirectiveToken
+                {
+                    Descriptor = new RazorDirectiveTokenDescriptor { Type = RazorDirectiveTokenType.Member },
+                    Value = chunk.MemberName,
+                }
+            };
+
+            var injectDirective = new RazorSingleLineDirective()
+            {
+                Name = "inject",
+                Tokens = injectTokens,
+            };
+            _context.Builder.Add(injectDirective);
         }
 
         protected override void Visit(TagHelperChunk chunk)

@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.Directives;
 
 namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR
 {
@@ -15,30 +16,23 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR
 
         public CSharpSourceTree Execute(RazorCodeDocument document, CSharpSourceTree sourceTree)
         {
-            string modelType = null;
-
-            // Directives are always harvested at the top of the document, no need to recurse deeper.
-            for (var i = 0; i < sourceTree.Children.Count; i++)
-            {
-                var directive = sourceTree.Children[i] as RazorDirective;
-                if (string.Equals(directive?.Name, "model", StringComparison.Ordinal))
-                {
-                    modelType = directive.Data["TypeName"];
-                    break;
-                }
-            }
-
+            var modelType = GetDeclaredModelType(sourceTree);
             var classInfo = document.GetClassName();
             if (modelType == null)
             {
                 // Insert a model directive into the system so sub-systems can rely on the model being the class.
-                var modelDirective = new RazorDirective
+                var modelTokens = new List<RazorDirectiveToken>()
+                {
+                    new RazorDirectiveToken
+                    {
+                        Descriptor = new RazorDirectiveTokenDescriptor { Type = RazorDirectiveTokenType.Type },
+                        Value = classInfo.Class,
+                    }
+                };
+                var modelDirective = new RazorSingleLineDirective()
                 {
                     Name = "model",
-                    Data = new Dictionary<string, string>
-                    {
-                        ["TypeName"] = classInfo.Class,
-                    },
+                    Tokens = modelTokens,
                 };
                 sourceTree.Children.Insert(0, modelDirective);
                 modelType = classInfo.Class;
@@ -59,29 +53,65 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR
             };
             classDeclaration.Children.Insert(0, viewDataProperty);
 
-            var injectHtmlHelper = new RazorDirective
-            {
-                Name = "inject",
-                Data = new Dictionary<string, string>
-                {
-                    ["TypeName"] = $"Microsoft.AspNetCore.Mvc.Rendering.IHtmlHelper<{modelType}>",
-                    ["MemberName"] = "Html"
-                },
-            };
-            classDeclaration.Children.Insert(0, injectHtmlHelper);
+            var injectHtmlHelper = CreateInjectDirective($"Microsoft.AspNetCore.Mvc.Rendering.IHtmlHelper<{modelType}>", "Html");
+            sourceTree.Children.Insert(0, injectHtmlHelper);
 
-            var injectLogger = new RazorDirective
-            {
-                Name = "inject",
-                Data = new Dictionary<string, string>
-                {
-                    ["TypeName"] = $"Microsoft.Extensions.Logging.ILogger<{classInfo.Class}>",
-                    ["MemberName"] = "Logger"
-                },
-            };
-            classDeclaration.Children.Insert(0, injectLogger);
+            var injectLogger = CreateInjectDirective($"Microsoft.Extensions.Logging.ILogger<{classInfo.Class}>", "Logger");
+            sourceTree.Children.Insert(0, injectLogger);
 
             return sourceTree;
+        }
+
+        private static string GetDeclaredModelType(ICSharpSource source)
+        {
+            var directive = source as IRazorDirective;
+            if (string.Equals(directive?.Name, "model", StringComparison.Ordinal))
+            {
+                var modelType = directive.GetValue(RazorDirectiveTokenType.Type);
+                return modelType;
+            }
+
+            var csharpBlock = source as CSharpBlock;
+            if (csharpBlock != null)
+            {
+                for (var i = 0; i < csharpBlock.Children.Count; i++)
+                {
+                    var child = csharpBlock.Children[i];
+                    var modelType = GetDeclaredModelType(child);
+
+                    if (modelType != null)
+                    {
+                        return modelType;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        private static IRazorDirective CreateInjectDirective(string typeName, string memberName)
+        {
+            var injectTokens = new List<RazorDirectiveToken>
+            {
+                new RazorDirectiveToken
+                {
+                    Descriptor = new RazorDirectiveTokenDescriptor { Type = RazorDirectiveTokenType.Type },
+                    Value = typeName,
+                },
+                new RazorDirectiveToken
+                {
+                    Descriptor = new RazorDirectiveTokenDescriptor { Type = RazorDirectiveTokenType.Member },
+                    Value = memberName,
+                }
+            };
+
+            var injectDirective = new RazorSingleLineDirective
+            {
+                Name = "inject",
+                Tokens = injectTokens,
+            };
+
+            return injectDirective;
         }
 
         private static ViewClassDeclaration FindClassDeclaration(CSharpBlock block)

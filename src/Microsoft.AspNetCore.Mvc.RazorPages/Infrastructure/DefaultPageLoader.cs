@@ -14,6 +14,7 @@ using Microsoft.AspNetCore.Mvc.RazorPages.Compilation.Rewriters;
 using Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure;
 using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution;
 using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering;
+using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.Directives;
 using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR;
 using Microsoft.AspNetCore.Razor.Compilation.TagHelpers;
 using Microsoft.CodeAnalysis;
@@ -78,6 +79,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Compilation
 
                 builder.Features.Add(new PageDirectiveFeature()); // RazorPages-specific feature
                 builder.Features.Add(new PagesPropertyInjectionPass());
+                builder.Features.Add(new RazorDirectiveDiscoveryPass());
 
                 builder.Phases.Add(new DefaultSyntaxTreePhase());
                 builder.Phases.Add(new DefaultChunkTreePhase());

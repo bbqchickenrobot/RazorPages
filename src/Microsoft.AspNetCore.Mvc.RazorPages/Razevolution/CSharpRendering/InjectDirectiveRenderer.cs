@@ -2,6 +2,9 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.Directives;
 using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR;
 
 namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
@@ -21,18 +24,27 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
 
         public bool TryRender(ICSharpSource source, CSharpRenderingContext context)
         {
-            var directive = source as RazorDirective;
-            if (string.Equals(directive?.Name, "inject", StringComparison.Ordinal))
+            if (source is ExecuteMethodDeclaration)
             {
-                context.Writer
-                    .WriteLine(_injectAttribute)
-                    .Write("public global::")
-                    .Write(directive.Data["TypeName"])
-                    .Write(" ")
-                    .Write(directive.Data["MemberName"])
-                    .WriteLine(" { get; private set; }");
+                var directives = context.GetDirectives();
+                foreach (var directive in directives)
+                {
+                    if (!string.Equals(directive.Name, "inject", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
 
-                return true;
+                    var typeName = directive.GetValue(RazorDirectiveTokenType.Type);
+                    var memberName = directive.GetValue(RazorDirectiveTokenType.Member);
+
+                    context.Writer
+                        .WriteLine(_injectAttribute)
+                        .Write("public global::")
+                        .Write(typeName)
+                        .Write(" ")
+                        .Write(memberName)
+                        .WriteLine(" { get; private set; }");
+                }
             }
 
             return false;
