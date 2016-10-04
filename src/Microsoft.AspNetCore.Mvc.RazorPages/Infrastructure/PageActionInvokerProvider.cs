@@ -1,6 +1,7 @@
 ﻿// Copyright (c) .NET Foundation. All rights reserved.
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -101,32 +102,13 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
                     HandlerMethods = new List<HandlerMethodDescriptor>(),
                 };
 
-                if (modelType != null)
+                if (modelType != null && modelType != compiledType)
                 {
-                    foreach (var method in modelType.GetMethods())
-                    {
-                        if (method.Name.StartsWith("OnGet") ||
-                            method.Name.StartsWith("OnPost"))
-                        {
-                            compiledActionDescriptor.HandlerMethods.Add(new HandlerMethodDescriptor()
-                            {
-                                Method = method,
-                            });
-                        }
-                    }
+                    // If the model and page type are different discover handler methods on the model as well.
+                    PopulateHandlerMethodDescriptors(modelType, compiledActionDescriptor);
                 }
 
-                foreach (var method in compiledType.GetMethods())
-                {
-                    if (method.Name.StartsWith("OnGet") ||
-                        method.Name.StartsWith("OnPost"))
-                    {
-                        compiledActionDescriptor.HandlerMethods.Add(new HandlerMethodDescriptor()
-                        {
-                            Method = method,
-                        });
-                    }
-                }
+                PopulateHandlerMethodDescriptors(compiledType, compiledActionDescriptor);
 
                 context.Result = new PageActionInvoker(
                     _diagnosticSource,
@@ -147,6 +129,23 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Infrastructure
 
         public void OnProvidersExecuted(ActionInvokerProviderContext context)
         {
+        }
+
+        private static void PopulateHandlerMethodDescriptors(TypeInfo type, CompiledPageActionDescriptor actionDescriptor)
+        {
+            var methods = type.GetMethods();
+            for (var i = 0; i < methods.Length; i++)
+            {
+                var method = methods[i];
+                if (method.Name.StartsWith("OnGet", StringComparison.Ordinal) ||
+                    method.Name.StartsWith("OnPost", StringComparison.Ordinal))
+                {
+                    actionDescriptor.HandlerMethods.Add(new HandlerMethodDescriptor()
+                    {
+                        Method = method,
+                    });
+                }
+            }
         }
     }
 }
