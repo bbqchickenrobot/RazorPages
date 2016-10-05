@@ -114,15 +114,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Compilation
         {
             var document = _engine.CreateCodeDocument(source);
 
-            var parsed = RazorParser.Parse(source);
-            document.SetSyntaxTree(RazorParser.Parse(source));
-            foreach (var error in parsed.Diagnostics)
-            {
-                document.ErrorSink.OnError(error);
-            }
-
-            AddVirtualDocuments(document, relativePath);
-
+            SetImportedDocuments(document, relativePath);
             var @namespace = GetNamespace(relativePath);
             var @class = "Generated_" + Path.GetFileNameWithoutExtension(Path.GetFileName(relativePath));
 
@@ -160,17 +152,19 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Compilation
             }
         }
 
-        private void AddVirtualDocuments(RazorCodeDocument document, string relativePath)
+        private void SetImportedDocuments(RazorCodeDocument document, string relativePath)
         {
+            var importedDocuments = new List<RazorSourceDocument>();
             foreach (var item in _project.EnumerateAscending(relativePath, ".razor"))
             {
                 if (item.Filename == "_PageImports.razor")
                 {
-                    var source = item.ToSourceDocument();
-                    var parsed = RazorParser.Parse(source);
-                    document.AddVirtualSyntaxTree(parsed);
+                    var sourceDocument = item.ToSourceDocument();
+                    importedDocuments.Add(sourceDocument);
                 }
             }
+
+            document.SetImportedDocuments(importedDocuments);
         }
 
         protected virtual CSharpCompilation CreateCompilation(

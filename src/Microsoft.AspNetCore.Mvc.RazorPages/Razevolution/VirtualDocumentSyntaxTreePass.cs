@@ -15,7 +15,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
 
         public RazorSyntaxTree Execute(RazorCodeDocument document, RazorSyntaxTree syntaxTree)
         {
-            var trees = document.GetVirtualSyntaxTrees();
+            var trees = GetImportedSyntaxTrees(document);
             if (trees.Count == 0)
             {
                 return syntaxTree;
@@ -38,6 +38,32 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
             }
 
             return RazorSyntaxTree.Create(blockBuilder.Build(), errors);
+        }
+
+        private static IList<RazorSyntaxTree> GetImportedSyntaxTrees(RazorCodeDocument document)
+        {
+            var trees = document.GetVirtualSyntaxTrees();
+
+            if (trees.Count > 0)
+            {
+                return trees;
+            }
+
+            var directiveDescriptors = document.GetDirectiveDescriptors();
+            var importedDocuments = document.GetImportedDocuments();
+            foreach (var importedDocument in importedDocuments)
+            {
+                var syntaxTree = RazorParser.Parse(importedDocument, directiveDescriptors);
+
+                foreach (var error in syntaxTree.Diagnostics)
+                {
+                    document.ErrorSink.OnError(error);
+                }
+
+                trees.Add(syntaxTree);
+            }
+
+            return trees;
         }
     }
 }

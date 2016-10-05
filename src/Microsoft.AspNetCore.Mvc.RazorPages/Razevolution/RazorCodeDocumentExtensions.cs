@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.Directives;
 using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR;
 
@@ -10,6 +11,33 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
 {
     public static class RazorCodeDocumentExtensions
     {
+        public static IEnumerable<RazorSourceDocument> GetImportedDocuments(this RazorCodeDocument document)
+        {
+            if (document == null)
+            {
+                throw new ArgumentNullException(nameof(document));
+            }
+
+            return (IEnumerable<RazorSourceDocument>)document.Items[typeof(IEnumerable<RazorSourceDocument>)] ?? Enumerable.Empty<RazorSourceDocument>();
+        }
+
+        public static void SetImportedDocuments(
+            this RazorCodeDocument document,
+            IEnumerable<RazorSourceDocument> importedDocuments)
+        {
+            if (document == null)
+            {
+                throw new ArgumentNullException(nameof(document));
+            }
+
+            if (importedDocuments == null)
+            {
+                throw new ArgumentNullException(nameof(importedDocuments));
+            }
+
+            document.Items[typeof(IEnumerable<RazorSourceDocument>)] = importedDocuments;
+        }
+
         public static IEnumerable<RazorDirectiveDescriptor> GetDirectiveDescriptors(this RazorCodeDocument document)
         {
             if (document == null)
@@ -17,7 +45,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
                 throw new ArgumentNullException(nameof(document));
             }
 
-            return (IEnumerable<RazorDirectiveDescriptor>)document.Items[typeof(IEnumerable<RazorDirectiveDescriptor>)];
+            return (IEnumerable<RazorDirectiveDescriptor>)document.Items[typeof(IEnumerable<RazorDirectiveDescriptor>)] ?? Enumerable.Empty<RazorDirectiveDescriptor>();
         }
 
         public static void SetDirectiveDescriptors(

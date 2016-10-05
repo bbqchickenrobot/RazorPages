@@ -16,7 +16,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
             var syntaxTree = document.GetSyntaxTree();
             if (syntaxTree == null)
             {
-                var directiveDescriptors = document.GetDirectiveDescriptors() ?? Enumerable.Empty<RazorDirectiveDescriptor>();
+                var directiveDescriptors = document.GetDirectiveDescriptors();
                 syntaxTree = RazorParser.Parse(document.Source, directiveDescriptors);
             }
 
