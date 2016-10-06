@@ -85,7 +85,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Compilation
                 builder.Phases.Add(new DefaultChunkTreePhase());
 
                 // New Razor generation phases.
-                builder.Phases.Add(new Razevolution.IR.DefaultCSharpSourceLoweringPhase());
+                builder.Phases.Add(new DefaultCSharpSourceLoweringPhase());
                 builder.Phases.Add(new DefaultCSharpDocumentGenerationPhase(_host));
 
                 // Uncomment the below line to force old-style view rendering.

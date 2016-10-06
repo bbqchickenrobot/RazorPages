@@ -2,49 +2,44 @@
 // Licensed under the Apache License, Version 2.0. See License.txt in the project root for license information.
 
 using System;
-using Microsoft.AspNetCore.Mvc.RazorPages.Compilation;
-using Microsoft.AspNetCore.Razor;
-using Microsoft.AspNetCore.Razor.Chunks.Generators;
-using Microsoft.AspNetCore.Razor.CodeGenerators;
+using System.Linq;
 
 namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
 {
     public class DefaultCSharpSourceLoweringPhase : ICSharpSourceLoweringPhase
     {
-        private readonly PageRazorEngineHost _host;
-
-        public DefaultCSharpSourceLoweringPhase(PageRazorEngineHost host)
-        {
-            _host = host;
-        }
-
         public RazorEngine Engine { get; set; }
 
         public void Execute(RazorCodeDocument document)
         {
             var chunkTree = document.GetChunkTree();
 
-            var classInfo = document.GetClassName();
-
-            var chunkGeneratorContext = new ChunkGeneratorContext(_host, classInfo.Class, classInfo.Namespace, document.Source.Filename, shouldGenerateLinePragmas: true);
-            chunkGeneratorContext.ChunkTreeBuilder = new AspNetCore.Razor.Chunks.ChunkTreeBuilder();
-            chunkGeneratorContext.ChunkTreeBuilder.Root.Association = chunkTree.Root.Association;
-            chunkGeneratorContext.ChunkTreeBuilder.Root.Start = chunkTree.Root.Start;
-
-            foreach (var chunk in chunkTree.Root.Children)
+            if (chunkTree == null)
             {
-                chunkGeneratorContext.ChunkTreeBuilder.Root.Children.Add(chunk);
+                throw new InvalidOperationException("Need to create the chunk tree");
             }
 
-            var codeGeneratorContext = new CodeGeneratorContext(chunkGeneratorContext, document.ErrorSink);
+            var sourceTree = document.GetSourceTree();
 
-            var codeGenerator = new PageCodeGenerator(codeGeneratorContext);
-            var codeGeneratorResult = codeGenerator.Generate();
-
-            document.SetGeneratedCSharpDocument(new GeneratedCSharpDocument()
+            if (sourceTree == null)
             {
-                GeneratedCode = codeGeneratorResult.Code,
-            });
+                var loweringFeature = Engine.Features.OfType<DefaultCSharpSourceLoweringFeature>().FirstOrDefault();
+                if (loweringFeature == null)
+                {
+                    throw new InvalidOperationException("Need to create the source tree");
+                }
+
+                sourceTree = loweringFeature.Execute(document, chunkTree);
+
+            }
+
+            var passes = Engine.Features.OfType<ICSharpSourceTreePass>().OrderBy(p => p.Order).ToArray();
+            foreach (var pass in passes)
+            {
+                sourceTree = pass.Execute(document, sourceTree);
+            }
+
+            document.SetSourceTree(sourceTree);
         }
     }
 }

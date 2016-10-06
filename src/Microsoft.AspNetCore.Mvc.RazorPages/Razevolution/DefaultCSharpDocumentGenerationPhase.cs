@@ -4,11 +4,12 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering;
 using Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.IR;
 using Microsoft.AspNetCore.Razor;
 using Microsoft.AspNetCore.Razor.CodeGenerators;
 
-namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution.CSharpRendering
+namespace Microsoft.AspNetCore.Mvc.RazorPages.Razevolution
 {
     public class DefaultCSharpDocumentGenerationPhase : ICodeDocumentGenerationPhase
     {

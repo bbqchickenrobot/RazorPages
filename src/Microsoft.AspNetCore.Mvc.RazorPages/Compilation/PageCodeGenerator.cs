@@ -4,7 +4,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Reflection;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc.Razor;
 using Microsoft.AspNetCore.Razor.Chunks;
@@ -26,7 +25,7 @@ namespace Microsoft.AspNetCore.Mvc.RazorPages.Compilation
         {
         }
 
-        protected ChunkTree Tree => Context.ChunkTreeBuilder.Root;
+        protected new ChunkTree Tree => Context.ChunkTreeBuilder.Root;
 
         protected override CSharpCodeVisitor CreateCSharpCodeVisitor(
             CSharpCodeWriter writer,
